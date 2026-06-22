@@ -1,327 +1,208 @@
 # Product Management
 
-## Project Overview
+Product Management is a Laravel 13 application with Breeze Blade authentication, MariaDB, Redis, Docker, queue processing, scheduler processing, native role-based access control, and a production-oriented product inventory module.
 
-Product Management is a Laravel 13 application using Laravel Breeze Blade authentication, MariaDB, Redis, Docker, queue processing, scheduler processing, and native role-based access control.
+## Features
 
-The application includes:
+- Product CRUD, details, search, filtering, sorting, and pagination
+- SKU generation in `PRD-000001` format
+- Quantity-driven stock status
+- Admin and standard user roles
+- Admin dashboard and user role management
+- Form Request validation
+- Service and repository layers
+- Rich text sanitization
+- Pest feature coverage
+- Dockerized PHP-FPM, nginx, MariaDB, Redis, queue, and scheduler
 
-- Public welcome page
-- Authenticated user dashboard
-- Admin dashboard
-- User profile management
-- Admin user management
-- Role management for Admin and Standard User accounts
+## One-Command Docker Setup
 
-Admin-only routes:
-
-```text
-/admin/dashboard
-/admin/users
-```
-
-## Requirements
-
-- PHP 8.3
-- Laravel 13
-- Composer
-- Node.js and npm
-- MariaDB
-- Redis
-- Docker
-
-## Local Installation
-
-Install PHP dependencies:
-
-```bash
-composer install
-```
-
-Install frontend dependencies:
-
-```bash
-npm install
-```
-
-Create the environment file:
-
-```bash
-cp .env.example .env
-```
-
-Generate the application key:
-
-```bash
-php artisan key:generate
-```
-
-Configure MariaDB in `.env`:
-
-```text
-DB_CONNECTION=mariadb
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=product_management
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-Run migrations:
-
-```bash
-php artisan migrate
-```
-
-Start the local application:
-
-```bash
-php artisan serve
-```
-
-Start Vite:
-
-```bash
-npm run dev
-```
-
-## Authentication
-
-Authentication is implemented with Laravel Breeze Blade.
-
-Included authentication features:
-
-- Login
-- Logout
-- Registration
-- Password Reset
-- Email Verification
-- Remember Me
-- Profile Management
-- Password Update
-- Account Deletion
-- Roles
-
-Roles:
-
-- Admin
-- Standard User
-
-Authorization is implemented with:
-
-- `users.role`
-- `App\Enums\UserRole`
-- `role:admin` middleware
-- `UserPolicy`
-- Blade `@can` checks
-
-Security controls:
-
-- CSRF protection
-- Session regeneration after login
-- Session invalidation after logout
-- Login rate limiting
-- Signed email verification URLs
-- Strong password defaults
-- Admin routes protected by `auth`, `verified`, and `role:admin`
-
-## Docker Setup
-
-Docker Compose includes:
-
-- PHP 8.3 FPM app container
-- nginx
-- MariaDB
-- Redis
-- queue worker
-- scheduler
-
-Create the environment file:
-
-```bash
-cp .env.example .env
-```
-
-Optional Docker-specific values:
-
-```text
-DOCKER_APP_URL=http://localhost:8080
-APP_PORT=8080
-APP_BIND_HOST=127.0.0.1
-DOCKER_DB_DATABASE=product_management
-DOCKER_DB_USERNAME=product_management
-DOCKER_DB_PASSWORD=secret
-DB_ROOT_PASSWORD=root_secret
-DB_BIND_HOST=127.0.0.1
-DB_FORWARD_PORT=3307
-DOCKER_REDIS_PASSWORD=null
-REDIS_BIND_HOST=127.0.0.1
-REDIS_FORWARD_PORT=6379
-```
-
-Start Docker:
-
-```bash
-docker compose up -d
-```
-
-Build and start Docker:
+After cloning the repository, run:
 
 ```bash
 docker compose up -d --build
 ```
 
-Run migrations inside Docker:
+The Docker setup automatically:
 
-```bash
-docker compose exec app php artisan migrate
-```
+- Creates `.env` from `.env.example` when missing
+- Generates `APP_KEY` for local development when missing
+- Installs Composer dependencies when the `vendor` volume is empty
+- Installs Node dependencies when the `node_modules` volume is empty
+- Builds frontend assets
+- Waits for MariaDB readiness
+- Runs `php artisan migrate --force`
+- Skips database seeders unless explicitly enabled
+- Runs `php artisan storage:link --force`
+- Starts PHP-FPM, nginx, queue worker, and scheduler
 
-Run the deployment automation script:
-
-```bash
-bash scripts/deploy.sh
-```
-
-Open the Docker app:
+Open:
 
 ```text
 http://localhost:8080
 ```
 
-## Running Queue
+Default local seeded accounts:
 
-Run the queue worker locally:
-
-```bash
-php artisan queue:work
+```text
+Admin: admin@example.com / password
+User:  user@example.com / password
 ```
 
-Run the queue worker in Docker:
+Seeders are opt-in during Docker setup. To run them, choose yes by setting both variables before starting Compose:
 
-```bash
-docker compose exec app php artisan queue:work
+```powershell
+$env:RUN_SEEDERS="true"
+$env:CONFIRM_RUN_SEEDERS="yes"
+docker compose up -d --build
 ```
 
-Docker also includes a dedicated queue container:
+Or place this in `.env`:
+
+```env
+RUN_SEEDERS=true
+CONFIRM_RUN_SEEDERS=yes
+```
+
+To skip seeders, leave the defaults:
+
+```env
+RUN_SEEDERS=false
+CONFIRM_RUN_SEEDERS=no
+```
+
+CKEditor uses GPL mode by default:
+
+```env
+VITE_CKEDITOR_LICENSE_KEY=GPL
+```
+
+The CKEditor powered-by label is part of GPL mode. To remove it, provide a valid CKEditor commercial license key in `.env`, then rebuild the frontend assets.
+
+## Docker Services
+
+- `setup`: one-shot application bootstrap
+- `app`: PHP-FPM
+- `nginx`: HTTP ingress
+- `mariadb`: database
+- `redis`: cache/session/queue backend
+- `queue`: Redis queue worker
+- `scheduler`: Laravel scheduler
+
+Useful commands:
 
 ```bash
+docker compose ps
+docker compose logs -f app
+docker compose logs -f setup
 docker compose logs -f queue
-```
-
-## Running Scheduler
-
-Run the scheduler locally:
-
-```bash
-php artisan schedule:work
-```
-
-Run the scheduler in Docker:
-
-```bash
-docker compose exec app php artisan schedule:work
-```
-
-Docker also includes a dedicated scheduler container:
-
-```bash
 docker compose logs -f scheduler
+docker compose down
+```
+
+To rebuild from scratch, including named volumes:
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+## Production Configuration
+
+Production must provide real secrets and secure settings through environment variables or a secret manager.
+
+Required production values:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_KEY=base64:your-production-key
+APP_URL=https://your-domain.example
+SESSION_ENCRYPT=true
+SESSION_SECURE_COOKIE=true
+DOCKER_DB_PASSWORD=strong-random-password
+DB_ROOT_PASSWORD=strong-random-root-password
+RUN_SEEDERS=false
+RUN_OPTIMIZE=true
+```
+
+The Docker setup fails fast in production when:
+
+- `APP_DEBUG=true`
+- `APP_KEY` is missing
+- `APP_URL` is not HTTPS
+- `SESSION_SECURE_COOKIE=true` is missing
+- default database credentials are used
+
+## Local Non-Docker Development
+
+Docker is the recommended setup path. For local host-based development:
+
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+npm run dev
+php artisan serve
 ```
 
 ## Testing
 
-The test suite uses a dedicated MariaDB testing database:
-
-```text
-product_management_testing
-```
-
-Create the testing database:
-
-```bash
-mysql -u root -e "CREATE DATABASE IF NOT EXISTS product_management_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-```
-
-Run PHPUnit/Laravel tests:
+Run tests locally:
 
 ```bash
 php artisan test
 ```
 
-## Pest Testing
-
-Run all Pest tests:
+Run tests in Docker:
 
 ```bash
-./vendor/bin/pest
+docker compose exec app php artisan test
 ```
 
-Run the focused authentication, authorization, and user-access Pest suite:
+Run formatting:
 
 ```bash
-composer pest:auth
+vendor/bin/pint --test
 ```
 
-Run Pest in Docker:
+Run security audits:
 
 ```bash
-docker compose exec app ./vendor/bin/pest
+composer audit --locked
+npm audit
 ```
 
-The tests use `RefreshDatabase`, so never point `phpunit.xml` at a development or production database.
+## CI/CD
 
-## Admin User Creation
+GitHub Actions runs:
 
-The local seeder creates default local/testing accounts only.
+- Composer install
+- npm install
+- Vite build
+- Pint
+- raw SQL scan
+- raw Blade output scan
+- Composer audit
+- npm audit
+- Laravel tests with MariaDB and Redis services
+- Docker Compose config validation
+- Docker image build
 
-Run:
-
-```bash
-php artisan db:seed
-```
-
-Default local admin:
+Workflow file:
 
 ```text
-Email: admin@example.com
-Password: password
-Role: admin
+.github/workflows/ci.yml
 ```
 
-Default local standard user:
+## Security Notes
 
-```text
-Email: user@example.com
-Password: password
-Role: user
-```
-
-Create an admin user manually with Tinker:
-
-```bash
-php artisan tinker
-```
-
-```php
-use App\Enums\UserRole;
-use App\Models\User;
-
-User::updateOrCreate(
-    ['email' => 'admin@example.com'],
-    [
-        'name' => 'Admin User',
-        'password' => 'ChangeMe123!',
-        'email_verified_at' => now(),
-        'role' => UserRole::Admin,
-    ],
-);
-```
-
-Create an admin user in Docker:
-
-```bash
-docker compose exec app php artisan tinker
-```
-
-Then run the same Tinker command above.
+- Keep `.env` files out of Git.
+- Rotate any secret that has ever been shared or committed.
+- Use HTTPS in production.
+- Keep `APP_DEBUG=false` outside local development.
+- Keep `SESSION_ENCRYPT=true`.
+- Keep `SESSION_SECURE_COOKIE=true` for HTTPS deployments.
+- Do not enable production seeders unless they are explicitly safe and reviewed.

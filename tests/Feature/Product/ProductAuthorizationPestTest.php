@@ -14,6 +14,58 @@ it('allows an admin to access product creation', function () {
         ->assertOk();
 });
 
+it('allows an admin to create products', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->post(route('products.store'), [
+            'sku' => 'PRD-000801',
+            'title' => 'Admin Created Product',
+            'description' => '<p>Administrators can create products.</p>',
+            'price' => '10.00',
+            'quantity' => '5',
+            'date_available' => '2026-07-01',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Product::where('sku', 'PRD-000801')->exists())->toBeTrue();
+});
+
+it('allows an admin to edit products', function () {
+    $admin = User::factory()->admin()->create();
+    $product = Product::factory()->create();
+
+    $this->actingAs($admin)
+        ->get(route('products.edit', $product))
+        ->assertOk();
+});
+
+it('allows an admin to delete products', function () {
+    $admin = User::factory()->admin()->create();
+    $product = Product::factory()->create();
+
+    $this->actingAs($admin)
+        ->delete(route('products.destroy', $product))
+        ->assertRedirect(route('products.index'));
+
+    expect(Product::query()->whereKey($product)->exists())->toBeFalse();
+});
+
+it('allows a standard user to view products', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['title' => 'Visible Product']);
+
+    $this->actingAs($user)
+        ->get(route('products.index'))
+        ->assertOk()
+        ->assertSee('Visible Product');
+
+    $this->actingAs($user)
+        ->get(route('products.show', $product))
+        ->assertOk()
+        ->assertSee('Visible Product');
+});
+
 it('forbids a standard user from creating products', function () {
     $user = User::factory()->create();
 
@@ -26,6 +78,7 @@ it('forbids a standard user from creating products', function () {
             'title' => 'Forbidden Product',
             'description' => '<p>Standard users cannot create products.</p>',
             'price' => '10.00',
+            'quantity' => '5',
             'date_available' => '2026-07-01',
         ])
         ->assertForbidden();
@@ -55,6 +108,7 @@ it('forbids a standard user from updating products', function () {
             'title' => 'Forbidden Update',
             'description' => '<p>Standard users cannot update products.</p>',
             'price' => '10.00',
+            'quantity' => '5',
             'date_available' => '2026-07-01',
         ])
         ->assertForbidden();

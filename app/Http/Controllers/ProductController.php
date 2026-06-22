@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProductRequest;
+use App\Enums\ProductSort;
+use App\Enums\StockStatus;
+use App\Http\Requests\Product\ProductFilterRequest;
+use App\Http\Requests\Product\ProductStoreRequest;
+use App\Http\Requests\Product\ProductUpdateRequest;
 use App\Models\Product;
 use App\Services\ProductService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -19,21 +22,18 @@ class ProductController extends Controller
     /**
      * Display a listing of products.
      */
-    public function index(Request $request): View
+    public function index(ProductFilterRequest $request): View
     {
         Gate::authorize('viewAny', Product::class);
 
-        $filters = $request->validate([
-            'q' => ['nullable', 'string', 'max:100'],
-            'price_min' => ['nullable', 'numeric', 'min:0'],
-            'price_max' => ['nullable', 'numeric', 'gte:price_min'],
-            'date_available' => ['nullable', 'date_format:Y-m-d'],
-        ]);
+        $filters = $request->filters();
 
         return view('products.index', [
             'products' => $this->products->paginate($filters),
             'filters' => $filters,
-            'search' => $filters['q'] ?? '',
+            'search' => $filters['search'] ?? '',
+            'sortOptions' => ProductSort::options(),
+            'stockStatuses' => StockStatus::cases(),
         ]);
     }
 
@@ -45,14 +45,15 @@ class ProductController extends Controller
         Gate::authorize('create', Product::class);
 
         return view('products.create', [
-            'product' => new Product,
+            'product' => $this->products->make(),
+            'stockStatuses' => StockStatus::cases(),
         ]);
     }
 
     /**
      * Store a newly created product.
      */
-    public function store(ProductRequest $request): RedirectResponse
+    public function store(ProductStoreRequest $request): RedirectResponse
     {
         Gate::authorize('create', Product::class);
 
@@ -84,13 +85,14 @@ class ProductController extends Controller
 
         return view('products.edit', [
             'product' => $product,
+            'stockStatuses' => StockStatus::cases(),
         ]);
     }
 
     /**
      * Update the specified product.
      */
-    public function update(ProductRequest $request, Product $product): RedirectResponse
+    public function update(ProductUpdateRequest $request, Product $product): RedirectResponse
     {
         Gate::authorize('update', $product);
 

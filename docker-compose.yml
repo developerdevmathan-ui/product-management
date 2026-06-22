@@ -1,4 +1,63 @@
 services:
+  setup:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    restart: "no"
+    working_dir: /var/www/html
+    init: true
+    command: docker-setup
+    environment: &app-environment
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_KEY: ${APP_KEY:-}
+      APP_URL: ${DOCKER_APP_URL:-http://localhost:8080}
+      DB_CONNECTION: mariadb
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_DATABASE: ${DOCKER_DB_DATABASE:-product_management}
+      DB_USERNAME: ${DOCKER_DB_USERNAME:-product_management}
+      DB_PASSWORD: ${DOCKER_DB_PASSWORD:-change_me_strong_db_password}
+      DOCKER_DB_PASSWORD: ${DOCKER_DB_PASSWORD:-change_me_strong_db_password}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change_me_strong_root_password}
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      SESSION_ENCRYPT: ${SESSION_ENCRYPT:-true}
+      SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
+      QUEUE_CONNECTION: redis
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${DOCKER_REDIS_PASSWORD:-null}
+      RUN_NODE_INSTALL: ${RUN_NODE_INSTALL:-true}
+      RUN_FRONTEND_BUILD: ${RUN_FRONTEND_BUILD:-true}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      RUN_SEEDERS: ${RUN_SEEDERS:-false}
+      CONFIRM_RUN_SEEDERS: ${CONFIRM_RUN_SEEDERS:-no}
+      RUN_STORAGE_LINK: ${RUN_STORAGE_LINK:-true}
+      RUN_OPTIMIZE: ${RUN_OPTIMIZE:-false}
+      WAIT_FOR_DATABASE: ${WAIT_FOR_DATABASE:-true}
+      DB_WAIT_ATTEMPTS: ${DB_WAIT_ATTEMPTS:-60}
+      DB_WAIT_SLEEP_SECONDS: ${DB_WAIT_SLEEP_SECONDS:-2}
+      NPM_INSTALL_COMMAND: ${NPM_INSTALL_COMMAND:-npm install}
+    volumes: &app-volumes
+      - .:/var/www/html
+      - vendor-data:/var/www/html/vendor
+      - node-modules-data:/var/www/html/node_modules
+      - storage-data:/var/www/html/storage
+      - bootstrap-cache:/var/www/html/bootstrap/cache
+      - public-build-data:/var/www/html/public/build
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
   app:
     build:
       context: .
@@ -7,39 +66,17 @@ services:
     working_dir: /var/www/html
     init: true
     environment:
-      APP_ENV: ${APP_ENV:-local}
-      APP_DEBUG: ${APP_DEBUG:-true}
-      APP_URL: ${DOCKER_APP_URL:-http://localhost:8080}
-      DB_CONNECTION: mariadb
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_DATABASE: ${DOCKER_DB_DATABASE:-product_management}
-      DB_USERNAME: ${DOCKER_DB_USERNAME:-product_management}
-      DB_PASSWORD: ${DOCKER_DB_PASSWORD:-secret}
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${DOCKER_REDIS_PASSWORD:-null}
-    volumes:
-      - .:/var/www/html
-      - vendor-data:/var/www/html/vendor
-      - storage-data:/var/www/html/storage
-      - bootstrap-cache:/var/www/html/bootstrap/cache
-      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+      <<: *app-environment
+    volumes: *app-volumes
     depends_on:
-      mariadb:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      setup:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "php artisan about --only=environment >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "test -f .env && test -f vendor/autoload.php && test -f public/build/manifest.json && test -f storage/framework/setup-complete && php artisan about --only=environment >/dev/null || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 10
+      start_period: 60s
     networks:
       - backend
     security_opt:
@@ -53,6 +90,7 @@ services:
     volumes:
       - .:/var/www/html:ro
       - storage-data:/var/www/html/storage:ro
+      - public-build-data:/var/www/html/public/build:ro
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       app:
@@ -75,14 +113,14 @@ services:
     environment:
       MARIADB_DATABASE: ${DOCKER_DB_DATABASE:-product_management}
       MARIADB_USER: ${DOCKER_DB_USERNAME:-product_management}
-      MARIADB_PASSWORD: ${DOCKER_DB_PASSWORD:-secret}
-      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+      MARIADB_PASSWORD: ${DOCKER_DB_PASSWORD:-change_me_strong_db_password}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change_me_strong_root_password}
     ports:
       - "${DB_BIND_HOST:-127.0.0.1}:${DB_FORWARD_PORT:-3307}:3306"
     volumes:
       - mariadb-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u$${MARIADB_USER} -p$${MARIADB_PASSWORD} --silent"]
+      test: ["CMD-SHELL", "mariadb -h 127.0.0.1 -u$${MARIADB_USER} -p$${MARIADB_PASSWORD} -e 'SELECT 1' $${MARIADB_DATABASE} >/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -121,28 +159,11 @@ services:
     init: true
     command: php artisan queue:work redis --sleep=3 --tries=3 --timeout=90
     environment:
-      APP_ENV: ${APP_ENV:-local}
-      APP_DEBUG: ${APP_DEBUG:-true}
-      DB_CONNECTION: mariadb
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_DATABASE: ${DOCKER_DB_DATABASE:-product_management}
-      DB_USERNAME: ${DOCKER_DB_USERNAME:-product_management}
-      DB_PASSWORD: ${DOCKER_DB_PASSWORD:-secret}
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${DOCKER_REDIS_PASSWORD:-null}
-    volumes:
-      - .:/var/www/html
-      - vendor-data:/var/www/html/vendor
-      - storage-data:/var/www/html/storage
-      - bootstrap-cache:/var/www/html/bootstrap/cache
-      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+      <<: *app-environment
+    volumes: *app-volumes
     depends_on:
+      setup:
+        condition: service_completed_successfully
       app:
         condition: service_healthy
       redis:
@@ -167,29 +188,14 @@ services:
     init: true
     command: php artisan schedule:work
     environment:
-      APP_ENV: ${APP_ENV:-local}
-      APP_DEBUG: ${APP_DEBUG:-true}
-      DB_CONNECTION: mariadb
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_DATABASE: ${DOCKER_DB_DATABASE:-product_management}
-      DB_USERNAME: ${DOCKER_DB_USERNAME:-product_management}
-      DB_PASSWORD: ${DOCKER_DB_PASSWORD:-secret}
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${DOCKER_REDIS_PASSWORD:-null}
-    volumes:
-      - .:/var/www/html
-      - vendor-data:/var/www/html/vendor
-      - storage-data:/var/www/html/storage
-      - bootstrap-cache:/var/www/html/bootstrap/cache
-      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini:ro
+      <<: *app-environment
+    volumes: *app-volumes
     depends_on:
+      setup:
+        condition: service_completed_successfully
       app:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "php artisan about --only=environment >/dev/null || exit 1"]
@@ -212,5 +218,7 @@ volumes:
   mariadb-data:
   redis-data:
   vendor-data:
+  node-modules-data:
   storage-data:
   bootstrap-cache:
+  public-build-data:

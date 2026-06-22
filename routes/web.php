@@ -23,11 +23,11 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('products', ProductController::class)
-        ->only(['index', 'show']);
-
-    Route::resource('products', ProductController::class)
         ->only(['create', 'store'])
         ->middleware('can:create,'.Product::class);
+
+    Route::resource('products', ProductController::class)
+        ->only(['index', 'show']);
 
     Route::resource('products', ProductController::class)
         ->only(['edit', 'update'])

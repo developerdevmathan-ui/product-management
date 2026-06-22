@@ -29,4 +29,17 @@ class UpdateUserRoleRequest extends FormRequest
             'role' => ['required', Rule::enum(UserRole::class)],
         ];
     }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'role.required' => __('Please select a user role.'),
+            'role' => __('The selected user role is invalid.'),
+        ];
+    }
 }

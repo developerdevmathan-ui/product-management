@@ -17,6 +17,7 @@ class EnsureUserHasRole
     public function handle(Request $request, Closure $next, string $role): Response
     {
         abort_unless($request->user()?->role === UserRole::tryFrom($role), 403);
+
         return $next($request);
     }
 }

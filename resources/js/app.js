@@ -1,8 +1,4 @@
 
 
-import Alpine from 'alpinejs';
+import './ui';
 import './product-editor';
-
-window.Alpine = Alpine;
-
-Alpine.start();

@@ -25,6 +25,12 @@ return new class extends Migration
                 ->update(['role' => UserRole::Admin->value]);
 
             Schema::table('users', function (Blueprint $table) {
+                try {
+                    $table->dropIndex(['is_admin']);
+                } catch (Throwable) {
+                    //
+                }
+
                 $table->dropColumn('is_admin');
             });
         }

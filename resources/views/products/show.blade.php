@@ -32,8 +32,23 @@
                 <div class="p-6">
                     <dl class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                         <div>
+                            <dt class="text-sm font-medium text-gray-500">{{ __('SKU') }}</dt>
+                            <dd class="mt-1 text-lg font-semibold text-gray-900">{{ $product->sku }}</dd>
+                        </div>
+
+                        <div>
                             <dt class="text-sm font-medium text-gray-500">{{ __('Price') }}</dt>
                             <dd class="mt-1 text-lg font-semibold text-gray-900">{{ number_format((float) $product->price, 2) }}</dd>
+                        </div>
+
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">{{ __('Quantity') }}</dt>
+                            <dd class="mt-1 text-lg font-semibold text-gray-900">{{ number_format($product->quantity) }}</dd>
+                        </div>
+
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">{{ __('Stock Status') }}</dt>
+                            <dd class="mt-1 text-lg font-semibold text-gray-900">{{ $product->stock_status->label() }}</dd>
                         </div>
 
                         <div>
@@ -45,7 +60,7 @@
                     <div class="pt-6 mt-6 border-t border-gray-200">
                         <h3 class="text-sm font-medium text-gray-500">{{ __('Description') }}</h3>
                         <div class="mt-3 product-description">
-                            {!! app(App\Services\RichTextSanitizer::class)->clean($product->description) !!}
+                            @richText($product->description)
                         </div>
                     </div>
 

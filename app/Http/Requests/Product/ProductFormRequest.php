@@ -1,42 +1,31 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Product;
 
-use App\Models\Product;
+use App\Enums\StockStatus;
 use App\Services\RichTextSanitizer;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
-class ProductRequest extends FormRequest
+abstract class ProductFormRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
-    {
-        $product = $this->route('product');
-
-        if ($product instanceof Product) {
-            return Gate::allows('update', $product);
-        }
-
-        return Gate::allows('create', Product::class);
-    }
-
     /**
      * Prepare the data for validation.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
+            'sku' => $this->filled('sku') ? Str::upper(trim((string) $this->input('sku'))) : $this->input('sku'),
             'title' => $this->filled('title') ? trim((string) $this->input('title')) : $this->input('title'),
             'description' => $this->has('description')
                 ? app(RichTextSanitizer::class)->clean((string) $this->input('description'))
                 : $this->input('description'),
             'price' => $this->filled('price') ? trim((string) $this->input('price')) : $this->input('price'),
+            'quantity' => $this->filled('quantity') ? trim((string) $this->input('quantity')) : $this->input('quantity'),
             'date_available' => $this->filled('date_available') ? trim((string) $this->input('date_available')) : $this->input('date_available'),
         ]);
     }
@@ -49,9 +38,17 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'sku' => [
+                'bail',
+                'nullable',
+                'string',
+                'regex:/^PRD-\d{6}$/',
+            ],
             'title' => ['bail', 'required', 'string', 'min:3', 'max:255'],
             'description' => ['bail', 'required', 'string'],
-            'price' => ['bail', 'required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
+            'price' => ['bail', 'required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:99999999.99'],
+            'quantity' => ['bail', 'required', 'integer', 'min:0', 'max:4294967295'],
+            'stock_status' => ['sometimes', 'nullable', Rule::enum(StockStatus::class)],
             'date_available' => ['bail', 'required', 'date_format:Y-m-d'],
         ];
     }
@@ -92,6 +89,9 @@ class ProductRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'sku.regex' => __('The SKU field must use the PRD-000001 format.'),
+            'price.min' => __('The price field must be greater than 0.'),
+            'quantity.min' => __('The quantity field must be at least 0.'),
             'date_available.date_format' => __('The date available field must be a valid date in YYYY-MM-DD format.'),
         ];
     }
@@ -106,9 +106,11 @@ class ProductRequest extends FormRequest
     public function validated($key = null, $default = null): array
     {
         return Arr::only(parent::validated($key, $default), [
+            'sku',
             'title',
             'description',
             'price',
+            'quantity',
             'date_available',
         ]);
     }

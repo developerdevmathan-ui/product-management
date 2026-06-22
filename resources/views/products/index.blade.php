@@ -23,34 +23,77 @@
             @endif
 
             <form method="GET" action="{{ route('products.index') }}" class="mb-6">
-                <div class="grid grid-cols-1 gap-3 lg:grid-cols-5">
-                    <div class="lg:col-span-2">
-                        <x-input-label for="q" :value="__('Search products')" />
-                        <x-text-input id="q" name="q" type="search" maxlength="100" class="block w-full mt-1"
-                            :value="$search" placeholder="Search by title or description" />
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div class="md:col-span-2">
+                        <x-input-label for="search" :value="__('Search products')" />
+                        <x-text-input id="search" name="search" type="search" maxlength="100" class="block w-full mt-1"
+                            :value="$search" placeholder="Search by SKU, title, or description" />
                     </div>
 
                     <div>
-                        <x-input-label for="price_min" :value="__('Min Price')" />
-                        <x-text-input id="price_min" name="price_min" type="number" min="0" step="0.01" inputmode="decimal" class="block w-full mt-1"
-                            :value="$filters['price_min'] ?? ''" />
+                        <x-input-label for="stock_status" :value="__('Stock Status')" />
+                        <select id="stock_status" name="stock_status"
+                            class="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">{{ __('Any Status') }}</option>
+                            @foreach ($stockStatuses as $status)
+                                <option value="{{ $status->value }}" @selected(($filters['stock_status'] ?? '') === $status->value)>
+                                    {{ $status->label() }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div>
-                        <x-input-label for="price_max" :value="__('Max Price')" />
-                        <x-text-input id="price_max" name="price_max" type="number" min="0" step="0.01" inputmode="decimal" class="block w-full mt-1"
-                            :value="$filters['price_max'] ?? ''" />
+                        <x-input-label for="sort" :value="__('Sort')" />
+                        <select id="sort" name="sort"
+                            class="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            @foreach ($sortOptions as $value => $label)
+                                <option value="{{ $value }}" @selected(($filters['sort'] ?? 'latest') === $value)>
+                                    {{ __($label) }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div>
-                        <x-input-label for="date_available" :value="__('Date Available')" />
-                        <x-text-input id="date_available" name="date_available" type="date" class="block w-full mt-1"
-                            :value="$filters['date_available'] ?? ''" />
+                        <x-input-label for="min_price" :value="__('Min Price')" />
+                        <x-text-input id="min_price" name="min_price" type="number" min="0" step="0.01" inputmode="decimal" class="block w-full mt-1"
+                            :value="$filters['min_price'] ?? ''" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="max_price" :value="__('Max Price')" />
+                        <x-text-input id="max_price" name="max_price" type="number" min="0" step="0.01" inputmode="decimal" class="block w-full mt-1"
+                            :value="$filters['max_price'] ?? ''" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="min_quantity" :value="__('Min Quantity')" />
+                        <x-text-input id="min_quantity" name="min_quantity" type="number" min="0" step="1" inputmode="numeric" class="block w-full mt-1"
+                            :value="$filters['min_quantity'] ?? ''" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="max_quantity" :value="__('Max Quantity')" />
+                        <x-text-input id="max_quantity" name="max_quantity" type="number" min="0" step="1" inputmode="numeric" class="block w-full mt-1"
+                            :value="$filters['max_quantity'] ?? ''" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="date_from" :value="__('Available From')" />
+                        <x-text-input id="date_from" name="date_from" type="date" class="block w-full mt-1"
+                            :value="$filters['date_from'] ?? ''" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="date_to" :value="__('Available To')" />
+                        <x-text-input id="date_to" name="date_to" type="date" class="block w-full mt-1"
+                            :value="$filters['date_to'] ?? ''" />
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-3 mt-4">
-                    @if ($errors->hasAny(['q', 'price_min', 'price_max', 'date_available']))
+                    @if ($errors->hasAny(['search', 'q', 'stock_status', 'min_price', 'max_price', 'price_min', 'price_max', 'min_quantity', 'max_quantity', 'date_from', 'date_to', 'date_available', 'sort']))
                         <div class="mr-auto text-sm text-red-600">
                             {{ __('Please check the product filters.') }}
                         </div>
@@ -61,7 +104,7 @@
                             {{ __('Apply') }}
                         </x-primary-button>
 
-                        @if ($search !== '' || filled($filters['price_min'] ?? null) || filled($filters['price_max'] ?? null) || filled($filters['date_available'] ?? null))
+                        @if ($search !== '' || filled($filters['stock_status'] ?? null) || filled($filters['min_price'] ?? null) || filled($filters['max_price'] ?? null) || filled($filters['min_quantity'] ?? null) || filled($filters['max_quantity'] ?? null) || filled($filters['date_from'] ?? null) || filled($filters['date_to'] ?? null) || ($filters['sort'] ?? 'latest') !== 'latest')
                             <a href="{{ route('products.index') }}"
                                 class="inline-flex items-center px-4 py-2 text-xs font-semibold tracking-widest text-gray-700 uppercase transition bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                                 {{ __('Clear') }}
@@ -77,10 +120,19 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                    {{ __('SKU') }}
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                     {{ __('Title') }}
                                 </th>
                                 <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                     {{ __('Price') }}
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                    {{ __('Quantity') }}
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                    {{ __('Stock Status') }}
                                 </th>
                                 <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                     {{ __('Date Available') }}
@@ -93,6 +145,9 @@
                         <tbody class="bg-white divide-y divide-gray-200">
                             @forelse ($products as $product)
                                 <tr>
+                                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                        {{ $product->sku }}
+                                    </td>
                                     <td class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
                                         <a href="{{ route('products.show', $product) }}" class="hover:text-indigo-600">
                                             {{ $product->title }}
@@ -100,6 +155,12 @@
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                                         {{ number_format((float) $product->price, 2) }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                        {{ number_format($product->quantity) }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                        {{ $product->stock_status->label() }}
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                                         {{ $product->date_available->toFormattedDateString() }}
@@ -130,7 +191,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="px-6 py-12 text-sm text-center text-gray-500">
+                                    <td colspan="7" class="px-6 py-12 text-sm text-center text-gray-500">
                                         @if ($search !== '')
                                             {{ __('No products matched your search.') }}
                                         @else

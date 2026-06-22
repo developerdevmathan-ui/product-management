@@ -30,4 +30,21 @@ class RegisteredUserRequest extends FormRequest
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ];
     }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required' => __('Please enter your name.'),
+            'email.required' => __('Please enter your email address.'),
+            'email.email' => __('Please enter a valid email address.'),
+            'email.unique' => __('This email address is already registered.'),
+            'password.required' => __('Please enter a password.'),
+            'password.confirmed' => __('The password confirmation does not match.'),
+        ];
+    }
 }

@@ -14,10 +14,23 @@ it('searches products by title', function () {
     Product::factory()->create(['title' => 'Desk Lamp']);
 
     $this->actingAs($user)
-        ->get(route('products.index', ['q' => 'laptop']))
+        ->get(route('products.index', ['search' => 'laptop']))
         ->assertOk()
         ->assertSee('Laptop Stand')
         ->assertDontSee('Desk Lamp');
+});
+
+it('searches products by sku', function () {
+    $user = User::factory()->create();
+
+    Product::factory()->create(['sku' => 'PRD-000777', 'title' => 'Inventory Console']);
+    Product::factory()->create(['sku' => 'PRD-000778', 'title' => 'Planning Console']);
+
+    $this->actingAs($user)
+        ->get(route('products.index', ['search' => '000777']))
+        ->assertOk()
+        ->assertSee('Inventory Console')
+        ->assertDontSee('Planning Console');
 });
 
 it('searches products by description', function () {
@@ -33,7 +46,7 @@ it('searches products by description', function () {
     ]);
 
     $this->actingAs($user)
-        ->get(route('products.index', ['q' => 'ACCESSORIES']))
+        ->get(route('products.index', ['search' => 'ACCESSORIES']))
         ->assertOk()
         ->assertSee('Planning Kit')
         ->assertDontSee('Writing Kit');
@@ -51,7 +64,7 @@ it('preserves the search query during pagination', function () {
         ->create();
 
     $this->actingAs($user)
-        ->get(route('products.index', ['q' => 'laptop']))
+        ->get(route('products.index', ['search' => 'laptop']))
         ->assertOk()
-        ->assertSee('q=laptop', false);
+        ->assertSee('search=laptop', false);
 });

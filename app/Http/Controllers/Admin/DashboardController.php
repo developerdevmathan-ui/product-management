@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AdminDashboardService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly AdminDashboardService $dashboard,
+    ) {}
+
     /**
      * Display the administrator dashboard.
      */
@@ -17,9 +21,6 @@ class DashboardController extends Controller
     {
         Gate::authorize('accessAdminDashboard', User::class);
 
-        return view('admin.dashboard', [
-            'adminCount' => User::where('role', UserRole::Admin->value)->count(),
-            'userCount' => User::where('role', UserRole::User->value)->count(),
-        ]);
+        return view('admin.dashboard', $this->dashboard->metrics());
     }
 }

@@ -16,8 +16,10 @@ import {
 
 import 'ckeditor5/ckeditor5.css';
 
+const ckeditorLicenseKey = import.meta.env.VITE_CKEDITOR_LICENSE_KEY || 'GPL';
+
 const editorConfig = {
-    licenseKey: 'GPL',
+    licenseKey: ckeditorLicenseKey,
     plugins: [
         BlockQuote,
         Bold,
