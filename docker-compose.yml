@@ -29,6 +29,14 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${DOCKER_REDIS_PASSWORD:-null}
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-developerdevmathan@gmail.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-developerdevmathan@gmail.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Laravel}
       RUN_NODE_INSTALL: ${RUN_NODE_INSTALL:-true}
       RUN_FRONTEND_BUILD: ${RUN_FRONTEND_BUILD:-true}
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}

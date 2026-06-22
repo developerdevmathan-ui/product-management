@@ -1,4 +1,4 @@
-# Laravel Security Audit
+# Security Audit
 
 Audit date: 2026-06-22
 

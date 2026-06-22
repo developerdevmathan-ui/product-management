@@ -1,4 +1,4 @@
-# Laravel Technical Assessment Audit Report
+# Audit Report
 
 Audit date: 2026-06-22
 
