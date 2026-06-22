@@ -10,7 +10,6 @@ services:
     environment: &app-environment
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
-      APP_KEY: ${APP_KEY:-}
       APP_URL: ${DOCKER_APP_URL:-http://localhost:8080}
       DB_CONNECTION: mariadb
       DB_HOST: mariadb
